@@ -1,0 +1,40 @@
+name: tg-osint-bot
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"  # Каждые 5 минут
+  workflow_dispatch:        # Можно запускать вручную
+
+concurrency:
+  group: tg-bot
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      
+      - run: pip install pyTelegramBotAPI phonenumbers
+      
+      - name: Обработать сообщения
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: python poll_once.py
+      
+      - name: Сохранить offset
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .offset.json
+          git commit -m "chore: update offset" || echo "ничего не изменилось"
+          git push || echo "push не удался"
